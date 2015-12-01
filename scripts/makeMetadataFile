@@ -1,0 +1,85 @@
+#!/usr/bin/env groovy 
+import BedGraph.*
+err = System.err
+
+class Domain{
+	def chromosome
+	int start
+	int end
+	def Domain(fields){
+		chromosome = fields[0]
+		start = fields[1] as int
+		end = fields[2] as int
+	}
+}
+
+
+domainFile = args[0]
+bedFileName = args[1]
+outFileName = args[2]
+
+/*
+	Domains are specified like: 
+chr1    760000  1240000
+chr1    1240000 1840000
+chr1    1840000 2320000
+chr1    2320000 3640000
+*/ 
+err.print "Reading domain boundaries..."
+domains = new ArrayList<Domain>()
+new File(domainFile).withReader{r->
+	r.splitEachLine("\t"){fields->
+		domains << new Domain(fields)
+	}
+}
+err.println "${domains.size()} domains read."
+
+// Read the bedgraph for this sample...	
+bedGraph = new BedGraph(bedFileName)
+keySet = bedGraph.keySet()
+err.println "keyset: "+keySet
+numStates = keySet.size()
+
+// Go through the domains, computing the average states for each domain
+
+def lastChr = "xxx"
+
+new File(outFileName).withWriter{w->
+startBedIdx = bedGraph.find("chr1",0)
+numStates = keySet.size()
+domains.each{d->
+	
+	//if (d.chromosome != "chr1") return; // Temporary DEBUGGING 
+		
+	if (d.chromosome != lastChr){
+		err.print "Making linear array for ${d.chromosome}..."
+		chrArray = bedGraph.toLinearArray(d.chromosome)
+		err.println "done. Size:"+chrArray.length
+		lastChr = d.chromosome
+	}
+
+	states = [:]
+	for(int i = 0;i < numStates+1;i++){
+		states[i] = 0
+	}
+	//(0..<numStates+1).each{states[it] = 0}
+	start = d.start
+	end = d.end
+	
+	for(int chrIdx = start;chrIdx <= end;chrIdx++){
+		
+		if (chrIdx > (chrArray.length-1) ) break;
+		
+		intstate = chrArray[chrIdx]
+		states[intstate]++
+	}
+	
+	blockSize = (end-start+1)	
+	states.each{state,v->
+		double frac = (double)v/(double)blockSize
+		w.writeLine "B_${d.chromosome}_${d.start}_${state}\t${frac.round(4)}"
+	}
+}
+
+}
+// 1m58.215s for chromosome1

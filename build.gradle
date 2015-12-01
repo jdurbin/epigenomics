@@ -1,0 +1,69 @@
+import durbin.util.*
+RunBash.enable()
+
+/**********************************************************
+*  This is a gradle build script.   You run it like you would a
+*  make file.  For example:
+*
+*  gradle makeAllModelSelectionJobs
+*
+*  will create all of the model selection jobs, including any needed
+*  dependencies.  
+* 
+*  gradle tasks 
+* 
+*  will give you a list of available tasks. 
+* 
+*  To pick up gradle itself, and related tools, do:
+*
+*  source /cluster/bin/jvmtools/jvmtools.sh
+* 
+*/
+
+// Add classes used by the build script, basically durbinlib utilities like RunBash
+
+buildscript {
+    dependencies {
+		classpath fileTree(dir: '/cluster/bin/durbinlib//target/jar/', include: '*.jar')
+    }
+}
+
+/**********************************************************
+*						TASKS
+*/
+
+// Cluster jobs to compute average of each of 15 HMM states over 
+// the ~3000 domains.  Each job takes about 15 minutes to complete. 
+task makeMetadataJobs<<{
+	def datadir = "/hive/users/james/wmm/epigenome/data/coreMarks/"
+	new File(datadir).eachFile{hmmCallBed->
+		def fields = hmmCallBed.name.split("_")
+		def sampleID = fields[0]
+		def cmd = "/hive/users/james/wmm/epigenome/scripts/makeMetadataFileFaster"
+		def domains = "/hive/users/james/wmm/epigenome/domains_hesc/combined/total.combined.domain"
+		def output = "/hive/users/james/wmm/epigenome/raw_wrangle/${sampleID}.tab"
+		println "${cmd} $domains $hmmCallBed $output"
+	}
+}
+
+// Each makeMetadataFile job creates a file with one column for one sample. 
+// This task combines all of these one column files into a feature by samples
+// table. 
+task combineRawWrangle<<{
+	def t = new DynamicTable()
+	def wrangleDir = "raw_wrangle/"
+	new File(wrangleDir).eachFile{oneSample->
+		def colName = oneSample.name
+		colName = colName.replaceAll(".tab","")  // chop off .tab suffix. 
+		println "Adding $colName"
+		oneSample.withReader{r->
+			r.splitEachLine("\t"){fields->
+				def rowName = fields[0]
+				def value = fields[1]
+				t[rowName][colName] = value
+			}
+		}
+	}
+	println "Writing domainAverage_all.tab ..."
+	t.write("domainAverage_all.tab","\t")
+}
