@@ -20,6 +20,11 @@ RunBash.enable()
 * 
 */
 
+/*
+Correlation jobs were made thus:
+/cluster/bin/wekaMine/wmCorrelateAllPairs -d /hive/users/james/wmm/epigenome/domainAverage_all.tab -o /hive/users/james/wmm/epigenome/allpairs_correlation/domains --k 100 > pearsonjobs.txt
+*/
+
 // Add classes used by the build script, basically durbinlib utilities like RunBash
 
 buildscript {
@@ -31,6 +36,9 @@ buildscript {
 /**********************************************************
 *						TASKS
 */
+
+
+
 
 // Cluster jobs to compute average of each of 15 HMM states over 
 // the ~3000 domains.  Each job takes about 15 minutes to complete. 
