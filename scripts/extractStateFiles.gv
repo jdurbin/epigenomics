@@ -1,0 +1,33 @@
+#!/usr/bin/env groovy 
+
+
+
+// Create a file for each state
+outwriters = []
+outwriters = (0..16).collect{
+	new File("state_${it}").newWriter()
+}
+
+// B_chr10_35440000_14
+new File(args[0]).withReader{r->
+	// Copy the heading to all the files...
+	heading = r.readLine()2
+	println heading
+	outwriters.each{w->
+		w.writeLine heading
+	}
+	
+	// Copy each line to the corresponding state file...
+	r.splitEachLine("\t"){fields->
+		name = fields[0]
+		namefields = name.split("_")
+		stateID = namefields[3] as int
+		if (stateID >= outwriters.size()){
+			System.err.println "stateID=$stateID.  outwriters.size=${outwriters.size()}"
+		}else	outwriters[stateID].writeLine fields.join("\t")	
+	}
+	
+}
+
+// Close all the files (flushing their buffers to disk)
+outwriters.each{it.close()}
