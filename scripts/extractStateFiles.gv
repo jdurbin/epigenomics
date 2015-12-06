@@ -1,18 +1,26 @@
 #!/usr/bin/env groovy 
 
 
+// Read the state key
+id2name = [:]
+new File("statekey.tab").withReader{r->
+	r.splitEachLine("\t"){fields->
+		name = fields[1].replaceAll(/\//,"_")
+		id2name[fields[0] as int] = name
+	}
+}
+
 
 // Create a file for each state
 outwriters = []
-outwriters = (0..16).collect{
-	new File("state_${it}").newWriter()
+outwriters = id2name.collect{id,name->
+	new File("eachstate/${name}").newWriter()
 }
 
 // B_chr10_35440000_14
 new File(args[0]).withReader{r->
 	// Copy the heading to all the files...
-	heading = r.readLine()2
-	println heading
+	heading = r.readLine()
 	outwriters.each{w->
 		w.writeLine heading
 	}
@@ -22,9 +30,22 @@ new File(args[0]).withReader{r->
 		name = fields[0]
 		namefields = name.split("_")
 		stateID = namefields[3] as int
-		if (stateID >= outwriters.size()){
-			System.err.println "stateID=$stateID.  outwriters.size=${outwriters.size()}"
-		}else	outwriters[stateID].writeLine fields.join("\t")	
+		if (stateID == 0) return; // This is an error in the wrangled file. 
+		stateName = id2name[stateID]
+		if (stateName == null){
+			println "ERROR: stateID: $stateID  stateName: $stateName id2name: $id2name"
+		}
+		
+		newfields = []
+		newfields << namefields[0]
+		newfields << namefields[1]
+		newfields << namefields[2]
+		newfields << stateName
+		newstatetag = newfields.join("_")
+		newline = "$newstatetag\t"+fields[1..-1].join("\t")
+		if (stateID > outwriters.size()){
+			System.err.println "ERROR: stateID=$stateID.  outwriters.size=${outwriters.size()}"
+		}else	outwriters[stateID-1].writeLine newline
 	}
 	
 }
