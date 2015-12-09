@@ -20,9 +20,13 @@ RunBash.enable()
 * 
 */
 
-/*
+/* 
+Per state files:
+./scripts/extractStateFiles.gv domainAverage_all.tab
+
 Correlation jobs were made thus:
 /cluster/bin/wekaMine/wmCorrelateAllPairs -d /hive/users/james/wmm/epigenome/domainAverage_all.tab -o /hive/users/james/wmm/epigenome/allpairs_correlation/domains --k 100 > pearsonjobs.txt
+
 */
 
 // Add classes used by the build script, basically durbinlib utilities like RunBash
@@ -38,6 +42,26 @@ buildscript {
 */
 
 
+// KJD ERROR LOOK INTO: ./rawcluster/ZNF/Rpts
+task combineCorrelationFiles<<{
+	new File("statekey.tab").splitEachLine("\t"){fields->
+		def name = fields[1]
+		"combinetables -o ./rawcluster/${name}_all.tab ./rawcluster/${name}_*".bash()
+	}
+
+}
+
+
+task makeCorrelationJobs<<{
+	def datadir = "/hive/users/james/wmm/epigenome/eachstate"
+	new File(datadir).eachFile{statefile->
+		def cmd = "/cluster/bin/wekaMine/wmCorrelateAllPairs"
+		def datafile = "$datadir/${statefile.name}"
+		def fullcmd = "$cmd -d $datafile -o /hive/users/james/wmm/epigenome/rawcluster/${statefile.name}_ -P -k 500 >> jobs.list"
+		println fullcmd
+		fullcmd.bash()
+	}	
+}
 
 
 // Cluster jobs to compute average of each of 15 HMM states over 
