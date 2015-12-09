@@ -1,17 +1,6 @@
 import durbin.util.*
 RunBash.enable()
-
-/* 
-Per state files:
-./scripts/extractStateFiles.gv domainAverage_all.tab
-
-Correlation jobs were made thus:
-/cluster/bin/wekaMine/wmCorrelateAllPairs -d /hive/users/james/wmm/epigenome/domainAverage_all.tab -o /hive/users/james/wmm/epigenome/allpairs_correlation/domains --k 100 > pearsonjobs.txt
-
-*/
-
 // Add classes used by the build script, basically durbinlib utilities like RunBash
-
 buildscript {
     dependencies {
 		classpath fileTree(dir: '/cluster/bin/durbinlib//target/jar/', include: '*.jar')
@@ -21,7 +10,6 @@ buildscript {
 /**********************************************************
 *						TASKS
 */
-
 
 // KJD ERROR LOOK INTO: ./rawcluster/ZNF/Rpts
 task combineCorrelationFiles<<{
@@ -80,3 +68,14 @@ task combineRawWrangle<<{
 	println "Writing domainAverage_all.tab ..."
 	t.write("domainAverage_all.tab","\t")
 }
+
+
+/* 
+Per state files:
+./scripts/extractStateFiles.gv domainAverage_all.tab
+
+Correlation jobs were made thus:
+/cluster/bin/wekaMine/wmCorrelateAllPairs -d /hive/users/james/wmm/epigenome/domainAverage_all.tab -o /hive/users/james/wmm/epigenome/allpairs_correlation/domains --k 100 > pearsonjobs.txt
+
+*/
+
