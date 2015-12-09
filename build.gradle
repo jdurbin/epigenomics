@@ -1,25 +1,6 @@
 import durbin.util.*
 RunBash.enable()
 
-/**********************************************************
-*  This is a gradle build script.   You run it like you would a
-*  make file.  For example:
-*
-*  gradle makeAllModelSelectionJobs
-*
-*  will create all of the model selection jobs, including any needed
-*  dependencies.  
-* 
-*  gradle tasks 
-* 
-*  will give you a list of available tasks. 
-* 
-*  To pick up gradle itself, and related tools, do:
-*
-*  source /cluster/bin/jvmtools/jvmtools.sh
-* 
-*/
-
 /* 
 Per state files:
 ./scripts/extractStateFiles.gv domainAverage_all.tab
