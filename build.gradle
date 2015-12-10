@@ -1,15 +1,68 @@
 import durbin.util.*
+import static durbin.weka.WM.*
+import durbin.weka.* 
+
 RunBash.enable()
+
 // Add classes used by the build script, basically durbinlib utilities like RunBash
 buildscript {
     dependencies {
-		classpath fileTree(dir: '/cluster/bin/durbinlib//target/jar/', include: '*.jar')
+		//classpath fileTree(dir: '/cluster/bin/durbinlib//target/jar/', include: '*.jar')
+		//classpath fileTree(dir: '/Users/james/src/RapidGroovy/', include: '*')
+		classpath fileTree(dir:'/Users/james/src/durbinlib/target/jar/', include:'*.jar')
+		//classpath files('/Users/james/src/RapidGroovy/')
     }
 }
 
 /**********************************************************
 *						TASKS
 */
+
+def rootDir = "/hive/users/james/wmm/"
+//def rootDir = "/Users/james/ucsc/exp/epigenomics/wmm"
+
+
+task transposeStateFiles<<{
+	new File("./eachstate/").eachFile{statefile->
+		if (!statefile.name.contains("_t")){
+			println "transpos ./eachstate/${statefile.name} > ./eachstate/${statefile.name}_t"
+			"transpos ./eachstate/${statefile.name} > ./eachstate/${statefile.name}_t".bash()			
+		}
+	}
+}
+
+
+// Perform kmeans clustering on each state and extract a single
+// feature out of each cluster to represent each cluster. 
+task kMeansSelection(dependsOn: transposeStateFiles)<<{
+	"mkdir -p ./kmselection".bash()
+		
+	def k = 100
+	def wm = new WM()
+	
+	new File("./eachstate/").eachFileMatch(~/.+_t/){dataFile->
+		def fileName = "./eachstate/${dataFile.name}"
+		def instances = wm.readNumericTab(file:fileName,transpose:true)
+		def noIDinstances = wm.removeID(instances)
+
+		def km = SimpleKMeans(I:100,N:k,O:true) // O preserver order
+		km.buildClusterer(noIDinstances)
+
+		// Pull out one representative from each cluster
+		def representativeSet = []
+		def usedClusters = [] as Set
+		noIDinstances.eachWithIndex{instance,i->
+			def cluster = km.clusterInstance(instance)
+			if (!usedClusters.contains(cluster)){
+				representativeSet<<instances[i]['ID']
+				usedClusters << cluster
+			}
+		}
+		new File("./kmselection/${dataFile.name}.txt").withWriter{w->		
+			representativeSet.each{w.writeLine it}
+		}
+	}
+}
 
 // KJD ERROR LOOK INTO: ./rawcluster/ZNF/Rpts
 task combineCorrelationFiles<<{
@@ -19,7 +72,6 @@ task combineCorrelationFiles<<{
 	}
 
 }
-
 
 task makeCorrelationJobs<<{
 	def datadir = "/hive/users/james/wmm/epigenome/eachstate"
